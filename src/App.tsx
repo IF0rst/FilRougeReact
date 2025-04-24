@@ -17,7 +17,7 @@ function App() {
     };
 
     return (<div>
-            <h1>Ajoute ton dresseur</h1>
+            <h1>Add your trainer!</h1>
             <TrainerInput onAddTrainer={addTrainer}/>
             <ul>
                 {trainers.map((trainer, index) => (
