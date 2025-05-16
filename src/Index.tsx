@@ -1,60 +1,46 @@
 import './css/App.css';
 import PokeNav from "./components/PokeNav.tsx";
-import {useEffect, useState} from "react";
-import {selectCapturedPokemons, useAppSelector} from "./store/Hooks.ts";
+import { useAppSelector } from "./store/Hooks.ts";
+import { selectCapturedPokemons } from "./store/stores/PokeSlice.ts";
+import { useGetPokemonQuery } from './store/api/pokeApi.ts';
 import PokeCard from "./components/PokeCard.tsx";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 interface PokemonData {
+    id: number;
     name: string;
     sprite: string;
-    id: number;
 }
 
 function Index() {
-    const [savedPk, setPk] = useState<PokemonData[]>([]);
-    const selector = useAppSelector(selectCapturedPokemons);
+    const capturedIds = useAppSelector(selectCapturedPokemons);
 
-    const getPkData = async (id: number): Promise<PokemonData | undefined> => {
-        try {
-            const response = await fetch(`https://tyradex.vercel.app/api/v1/pokemon/${id}`, {
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'RobotPokemon',
-                    'From': 'http://localhost:5174/',
-                    'Content-Type': 'application/json',
-                },
-            });
-            const {name, sprites} = await response.json();
-            return {id:id,name: name.fr, sprite: sprites.regular};
-        } catch (e) {
-            console.error('Erreur lors du chargement des données :', e);
-            return undefined;
-        }
-    };
+    const pokemonQueries = capturedIds.map(id => ({
+        id,
+        ...useGetPokemonQuery(id),
+    }));
 
-    const updatePkList = async () => {
-        try {
-            const results = await Promise.all(selector.map(p => getPkData(p)));
-            const validResults = results.filter((pk): pk is PokemonData => pk !== undefined);
-            setPk(validResults);
-        } catch (e) {
-            console.error("Erreur lors de la mise à jour de la liste des Pokémon :", e);
-        }
-    };
+    const pokemons: PokemonData[] = pokemonQueries
+        .filter(query => query.data && !query.isFetching && !query.isError)
+        .map(query => ({
+            id: query.id,
+            name: query.data.name.fr,
+            sprite: query.data.sprites.regular,
+        }));
 
-    useEffect(() => {
-        if (selector.length > 0) {
-            updatePkList();
-        }
-    }, [selector]);
+    const isLoading = pokemonQueries.some(query => query.isFetching);
+    const hasError = pokemonQueries.some(query => query.isError);
 
     return (
         <>
-            <PokeNav/>
-            <div style={{display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '16px'}}>
-                {savedPk.map((pk, index) => (
-                    <Link to={`/pokemon/${pk.id}`}><PokeCard key={index} name={pk.name} image={pk.sprite}/></Link>
+            <PokeNav />
+            {isLoading && <p>Chargement des Pokémon...</p>}
+            {hasError && <p>Erreur lors du chargement de certains Pokémon.</p>}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '16px' }}>
+                {pokemons.map(pk => (
+                    <Link to={`/pokemon/${pk.id}`} key={pk.id}>
+                        <PokeCard name={pk.name} image={pk.sprite} />
+                    </Link>
                 ))}
             </div>
         </>

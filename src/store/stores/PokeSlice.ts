@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type {RootState} from "../store.ts";
 
 interface PokemonCapturedState {
     capturedPokemons: number[];
@@ -25,5 +26,6 @@ const pokeSlice = createSlice({
     },
 });
 
+export const selectCapturedPokemons = (state: RootState) => state.pokemon.capturedPokemons;
 export const { addPokemon, releasePokemon } = pokeSlice.actions;
 export default pokeSlice.reducer;
